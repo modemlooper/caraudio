@@ -1,3 +1,6 @@
 export interface CarAudioPlugin {
-  echo(options: { value: string }): Promise<{ value: string }>;
+  play(options: { url: string }): Promise<{ url: string }>;
+  pause(): Promise<void>;
+  resume(): Promise<void>;
+  stop(): Promise<void>;
 }

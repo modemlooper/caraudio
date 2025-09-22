@@ -34,16 +34,23 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        // Called when the app was launched with a url. Feel free to add additional processing here,
-        // but if you want the App API to support tracking app url opens, make sure to keep this call
+        // Called when the app was launched with a URL.
+        // If Capacitor is available, let it handle URL opens; otherwise, return false.
+        #if canImport(Capacitor)
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
+        #else
+        return false
+        #endif
     }
 
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
         // Called when the app was launched with an activity, including Universal Links.
-        // Feel free to add additional processing here, but if you want the App API to support
-        // tracking app url opens, make sure to keep this call
+        // If Capacitor is available, let it handle; otherwise, return false.
+        #if canImport(Capacitor)
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
+        #else
+        return false
+        #endif
     }
 
 }

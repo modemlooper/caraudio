@@ -10,14 +10,49 @@ public class CarAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "CarAudioPlugin"
     public let jsName = "CarAudio"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "echo", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "play", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stop", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "pause", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "resume", returnType: CAPPluginReturnPromise)
     ]
-    private let implementation = CarAudio()
 
-    @objc func echo(_ call: CAPPluginCall) {
-        let value = call.getString("value") ?? ""
-        call.resolve([
-            "value": implementation.echo(value)
-        ])
+    override public func load() {
+        // This will initialize the AudioManager and setup remote transport controls
+        _ = AudioManager.shared
+    }
+
+    @objc func stop(_ call: CAPPluginCall) {
+        AudioManager.shared.stop()
+        call.resolve(["status": "stopped"])
+    }
+
+    @objc func play(_ call: CAPPluginCall) {
+        guard let url = call.getString("url") else {
+            call.reject("URL is required")
+            return
+        }
+        
+        let title = call.getString("title") ?? "Uknown Title"
+        let artist = call.getString("artist") ?? "Umknown Artist"
+        let artwork = call.getString("artwork") ?? ""
+
+        let success = AudioManager.shared.play(url: url, title: title, artist: artist, artwork: artwork)
+        if success {
+            AudioManager.shared.updateNowPlaying(title: title, artist: artist, artworkURL: artwork)
+            call.resolve(["status": "playing"])
+        } else {
+            call.reject("Failed to play audio")
+        }
+    }
+    
+    @objc func pause(_ call: CAPPluginCall) {
+        AudioManager.shared.pause()
+        call.resolve(["status": "paused"])
+    }
+    
+    @objc func resume(_ call: CAPPluginCall) {
+        AudioManager.shared.resume()
+        call.resolve(["status": "resumed"])
     }
 }
+

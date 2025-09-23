@@ -50,6 +50,10 @@ public class AndroidAutoController {
         this.listener = listener;
     }
     
+    public AndroidAutoControllerListener getListener() {
+        return this.listener;
+    }
+    
     private void initializeMediaSession() {
         // Create MediaSession
         mediaSession = new MediaSessionCompat(context, "CarAudioMediaSession");
@@ -213,7 +217,7 @@ public class AndroidAutoController {
         Log.e(TAG, "Updated playback state to ERROR: " + errorMessage);
     }
     
-    private void handlePlayCommand() {
+    public void handlePlayCommand() {
         if (carAudio.isPaused()) {
             // Resume existing audio
             carAudio.resume();
@@ -226,7 +230,7 @@ public class AndroidAutoController {
         }
     }
     
-    private void handlePauseCommand() {
+    public void handlePauseCommand() {
         if (carAudio.isPlaying()) {
             carAudio.pause();
             notifyPaused(0); // You might want to track actual position
@@ -237,7 +241,7 @@ public class AndroidAutoController {
         }
     }
     
-    private void handleStopCommand() {
+    public void handleStopCommand() {
         if (carAudio.isPlaying() || carAudio.isPaused()) {
             carAudio.stop();
             notifyStopped();

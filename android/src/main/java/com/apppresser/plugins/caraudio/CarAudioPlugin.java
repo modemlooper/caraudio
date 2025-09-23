@@ -5,6 +5,7 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import android.util.Log;
 
 @CapacitorPlugin(name = "CarAudio")
 public class CarAudioPlugin extends Plugin implements AndroidAutoController.AndroidAutoControllerListener {
@@ -22,6 +23,11 @@ public class CarAudioPlugin extends Plugin implements AndroidAutoController.Andr
         // Add Android Auto controller
         androidAutoController = new AndroidAutoController(getContext(), implementation);
         androidAutoController.setListener(this);
+        
+        // Register the AndroidAutoController with the MediaBrowserService
+        CarAudioMediaBrowserService.setAndroidAutoController(androidAutoController);
+        
+        Log.d("CarAudioPlugin", "CarAudio plugin loaded with Android Auto support");
     }
     
     // Add this new method to enable/disable Android Auto
@@ -45,6 +51,9 @@ public class CarAudioPlugin extends Plugin implements AndroidAutoController.Andr
         String album = call.getString("album", "");
         String artwork = call.getString("artwork", "");
         Long duration = call.getLong("duration", 0L);
+        
+        // Enable Android Auto by default
+        androidAutoEnabled = true;
         
         // Your existing CarAudio play logic
         implementation.play(url, title, artist, artwork);
@@ -77,7 +86,9 @@ public class CarAudioPlugin extends Plugin implements AndroidAutoController.Andr
             androidAutoController.notifyPaused(0);
         }
         
-        // Your existing response logic
+        JSObject result = new JSObject();
+        result.put("success", true);
+        call.resolve(result);
     }
     
     // Modify your existing resume method
@@ -89,7 +100,9 @@ public class CarAudioPlugin extends Plugin implements AndroidAutoController.Andr
             androidAutoController.notifyPlaying(0);
         }
         
-        // Your existing response logic
+        JSObject result = new JSObject();
+        result.put("success", true);
+        call.resolve(result);
     }
     
     // Modify your existing stop method
@@ -101,7 +114,9 @@ public class CarAudioPlugin extends Plugin implements AndroidAutoController.Andr
             androidAutoController.notifyStopped();
         }
         
-        // Your existing response logic
+        JSObject result = new JSObject();
+        result.put("success", true);
+        call.resolve(result);
     }
     
     // Implement AndroidAutoController.AndroidAutoControllerListener

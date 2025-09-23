@@ -13,14 +13,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/android": "7.4.3",
     "@capacitor/core": "latest",
-    "caraudio": "file:..",
-    "@capacitor/ios": "7.0.0",
-    "@capacitor/android": "7.0.0"
+    "@capacitor/ios": "7.4.3",
+    "caraudio": "file:.."
   },
   "devDependencies": {
     "@capacitor/cli": "latest",
-    "vite": "^5.4.2"
+    "vite": "7.1.7"
   },
   "author": "",
   "license": "ISC"

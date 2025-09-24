@@ -1,6 +1,6 @@
 {
-  "appId": "com.example.plugin",
-  "appName": "example-app",
+  "appId": "com.apppresser.caraudio",
+  "appName": "CarAudio",
   "webDir": "dist",
   "plugins": {
     "SplashScreen": {

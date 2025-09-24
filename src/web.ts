@@ -1,6 +1,6 @@
 import { WebPlugin } from '@capacitor/core';
 
-import type { CarAudioPlugin, PlayOptions, PlaybackStatus } from './definitions';
+import type { CarAudioPlugin, PlayOptions, PlaybackStatus, AndroidAutoStatus } from './definitions';
 
 export class CarAudioWeb extends WebPlugin implements CarAudioPlugin {
   async play(options: PlayOptions): Promise<PlaybackStatus> {
@@ -26,5 +26,16 @@ export class CarAudioWeb extends WebPlugin implements CarAudioPlugin {
   async ensureAudibleVolume(): Promise<{ success: boolean }> {
     console.warn('CarAudio.ensureAudibleVolume is not implemented for web.');
     return Promise.reject('Not implemented for web.');
+  }
+
+  // Android Auto methods (not available on web)
+  async enableAndroidAuto(_options: { enabled: boolean }): Promise<AndroidAutoStatus> {
+    console.warn('CarAudio.enableAndroidAuto is not available on web platform.');
+    return Promise.resolve({ enabled: false, connected: false });
+  }
+
+  async updateAndroidAutoNowPlaying(options: PlayOptions): Promise<{ success: boolean }> {
+    console.warn('CarAudio.updateAndroidAutoNowPlaying is not available on web platform.', options);
+    return Promise.resolve({ success: false });
   }
 }

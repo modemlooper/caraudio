@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
+import android.os.Handler;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
@@ -16,7 +17,7 @@ import java.net.URL;
  * AndroidAutoController handles MediaSession integration for Android Auto
  * while delegating actual audio playback to CarAudio
  */
-public class AndroidAutoController {
+public class AndroidAutoController implements CarAudio.CarAudioStateListener {
     
     public static final String TAG = "AndroidAutoController";
     private Context context;
@@ -25,6 +26,7 @@ public class AndroidAutoController {
     private AndroidAutoControllerListener listener;
     
     // Current track info
+    private String currentUrl;
     private String currentTitle;
     private String currentArtist;
     private String currentAlbum;
@@ -38,11 +40,14 @@ public class AndroidAutoController {
         void onSkipToNext();
         void onSkipToPrevious();
         void onSeekTo(long position);
+        void onTrackSelected(String url, String title, String artist, String album, String artworkUrl, long duration);
     }
     
     public AndroidAutoController(Context context, CarAudio carAudio) {
         this.context = context;
         this.carAudio = carAudio;
+        // Set this controller as the state listener for CarAudio
+        this.carAudio.setStateListener(this);
         initializeMediaSession();
     }
     
@@ -117,9 +122,10 @@ public class AndroidAutoController {
     /**
      * Update the now playing metadata for Android Auto
      */
-    public void updateNowPlaying(String title, String artist, String album, String artworkUrl, long durationMs) {
-        Log.d(TAG, "Updating now playing: " + title + " by " + artist);
+    public void updateNowPlaying(String url, String title, String artist, String album, String artworkUrl, long durationMs) {
+        Log.d(TAG, "Updating now playing: " + title + " by " + artist + " (URL: " + url + ")");
         
+        this.currentUrl = url;
         this.currentTitle = title;
         this.currentArtist = artist;
         this.currentAlbum = album;
@@ -137,6 +143,21 @@ public class AndroidAutoController {
         // Load artwork asynchronously if provided
         if (artworkUrl != null && !artworkUrl.trim().isEmpty()) {
             loadArtworkAsync(artworkUrl, metadataBuilder);
+        }
+    }
+    
+    /**
+     * Update now playing and notify JavaScript about track selection from Android Auto
+     */
+    public void updateNowPlayingFromAndroidAuto(String url, String title, String artist, String album, String artworkUrl, long durationMs) {
+        Log.d(TAG, "Track selected from Android Auto: " + title + " by " + artist + " (URL: " + url + ")");
+        
+        // Update the metadata
+        updateNowPlaying(url, title, artist, album, artworkUrl, durationMs);
+        
+        // Notify JavaScript about the track selection
+        if (listener != null) {
+            listener.onTrackSelected(url, title, artist, album, artworkUrl, durationMs);
         }
     }
     
@@ -218,22 +239,62 @@ public class AndroidAutoController {
     }
     
     public void handlePlayCommand() {
+        Log.d(TAG, "handlePlayCommand() called");
+        Log.d(TAG, "CarAudio state - isPlaying: " + carAudio.isPlaying() + ", isPaused: " + carAudio.isPaused() + ", isStopped: " + carAudio.isStopped());
+        Log.d(TAG, "Current URL: " + currentUrl);
+        
         if (carAudio.isPaused()) {
-            // Resume existing audio
+            // Resume existing audio - state will be updated via CarAudioStateListener
+            Log.d(TAG, "Resuming paused audio");
             carAudio.resume();
-            notifyPlaying(0); // You might want to track actual position
-        } else {
-            // Notify listener to start new audio if needed
+            // Notify JavaScript about the resume action
             if (listener != null) {
                 listener.onPlay();
+            }
+        } else if (carAudio.isPlaying()) {
+            // Already playing, just update state
+            Log.d(TAG, "Already playing, updating state");
+            updatePlaybackState(PlaybackStateCompat.STATE_PLAYING, 0);
+            // Notify JavaScript about the play action
+            if (listener != null) {
+                listener.onPlay();
+            }
+        } else {
+            // Not currently playing anything
+            if (currentUrl != null && !currentUrl.isEmpty()) {
+                // We have a URL (from Android Auto or JavaScript), use it - state will be updated via CarAudioStateListener
+                Log.d(TAG, "Starting playback with URL: " + currentUrl);
+                carAudio.play(currentUrl, currentTitle, currentArtist, currentArtworkUrl);
+                
+                // Always notify JavaScript when starting playback, so it can update its UI
+                if (listener != null) {
+                    Log.d(TAG, "Notifying JavaScript listener about play action");
+                    listener.onPlay();
+                }
+            } else {
+                // No URL available, notify listener to request one from JavaScript
+                Log.d(TAG, "No URL available, requesting from JavaScript");
+                if (listener != null) {
+                    listener.onPlay();
+                }
+                
+                // Fallback to sample URL only if JavaScript doesn't respond
+                new android.os.Handler().postDelayed(() -> {
+                    if (!carAudio.isPlaying() && (currentUrl == null || currentUrl.isEmpty())) {
+                        String fallbackUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+                        Log.d(TAG, "JavaScript didn't provide URL, using fallback: " + fallbackUrl);
+                        carAudio.play(fallbackUrl, "Sample Track", "Sample Artist", null);
+                        updateNowPlaying(fallbackUrl, "Sample Track", "Sample Artist", "Sample Album", null, 180000);
+                    }
+                }, 1000); // Give JavaScript 1 second to respond
             }
         }
     }
     
     public void handlePauseCommand() {
         if (carAudio.isPlaying()) {
+            // Pause audio - state will be updated via CarAudioStateListener
             carAudio.pause();
-            notifyPaused(0); // You might want to track actual position
         }
         
         if (listener != null) {
@@ -243,8 +304,8 @@ public class AndroidAutoController {
     
     public void handleStopCommand() {
         if (carAudio.isPlaying() || carAudio.isPaused()) {
+            // Stop audio - state will be updated via CarAudioStateListener
             carAudio.stop();
-            notifyStopped();
         }
         
         if (listener != null) {
@@ -292,6 +353,13 @@ public class AndroidAutoController {
     }
     
     /**
+     * Get the MediaSession token for use by MediaBrowserService
+     */
+    public MediaSessionCompat.Token getSessionToken() {
+        return mediaSession != null ? mediaSession.getSessionToken() : null;
+    }
+    
+    /**
      * Check if Android Auto is connected
      */
     public boolean isAndroidAutoConnected() {
@@ -331,5 +399,42 @@ public class AndroidAutoController {
             default:
                 return "UNKNOWN(" + state + ")";
         }
+    }
+    
+    // CarAudio.CarAudioStateListener implementation
+    @Override
+    public void onPreparing() {
+        Log.d(TAG, "CarAudio is preparing - setting buffering state");
+        updatePlaybackState(PlaybackStateCompat.STATE_BUFFERING, 0);
+    }
+    
+    @Override
+    public void onPlaying() {
+        Log.d(TAG, "CarAudio started playing - setting playing state");
+        updatePlaybackState(PlaybackStateCompat.STATE_PLAYING, 0);
+    }
+    
+    @Override
+    public void onPaused() {
+        Log.d(TAG, "CarAudio paused - setting paused state");
+        updatePlaybackState(PlaybackStateCompat.STATE_PAUSED, 0);
+    }
+    
+    @Override
+    public void onStopped() {
+        Log.d(TAG, "CarAudio stopped - setting stopped state");
+        updatePlaybackState(PlaybackStateCompat.STATE_STOPPED, 0);
+    }
+    
+    @Override
+    public void onError(String errorMessage) {
+        Log.e(TAG, "CarAudio error - setting error state: " + errorMessage);
+        notifyError(errorMessage);
+    }
+    
+    @Override
+    public void onBuffering() {
+        Log.d(TAG, "CarAudio buffering - setting buffering state");
+        updatePlaybackState(PlaybackStateCompat.STATE_BUFFERING, 0);
     }
 }

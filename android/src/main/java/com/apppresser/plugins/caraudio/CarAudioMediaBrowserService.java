@@ -31,31 +31,44 @@ public class CarAudioMediaBrowserService extends MediaBrowserServiceCompat {
         // Use the static controller if available
         this.androidAutoController = staticAndroidAutoController;
         
-        // Create a MediaSessionCompat
-        mediaSession = new MediaSessionCompat(this, TAG);
-        
-        // Enable callbacks from MediaButtons and TransportControls
-        mediaSession.setFlags(
-            MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
-            MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
-        
-        // Create a PlaybackStateCompat.Builder
-        stateBuilder = new PlaybackStateCompat.Builder()
-            .setActions(
-                PlaybackStateCompat.ACTION_PLAY |
-                PlaybackStateCompat.ACTION_PAUSE |
-                PlaybackStateCompat.ACTION_STOP |
-                PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
-                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS |
-                PlaybackStateCompat.ACTION_SEEK_TO);
-        
-        mediaSession.setPlaybackState(stateBuilder.build());
-        
-        // MySessionCallback has methods that handle callbacks from a media controller
-        mediaSession.setCallback(new MySessionCallback());
-        
-        // Set the session's token so that client activities can communicate with it.
-        setSessionToken(mediaSession.getSessionToken());
+        if (androidAutoController != null) {
+            // Use the AndroidAutoController's MediaSession instead of creating our own
+            Log.d(TAG, "Using AndroidAutoController's MediaSession");
+            MediaSessionCompat.Token token = androidAutoController.getSessionToken();
+            if (token != null) {
+                setSessionToken(token);
+                Log.d(TAG, "Set session token from AndroidAutoController");
+            } else {
+                Log.e(TAG, "AndroidAutoController session token is null");
+            }
+        } else {
+            Log.w(TAG, "AndroidAutoController not available, creating fallback MediaSession");
+            // Create a fallback MediaSessionCompat
+            mediaSession = new MediaSessionCompat(this, TAG);
+            
+            // Enable callbacks from MediaButtons and TransportControls
+            mediaSession.setFlags(
+                MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
+                MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
+            
+            // Create a PlaybackStateCompat.Builder
+            stateBuilder = new PlaybackStateCompat.Builder()
+                .setActions(
+                    PlaybackStateCompat.ACTION_PLAY |
+                    PlaybackStateCompat.ACTION_PAUSE |
+                    PlaybackStateCompat.ACTION_STOP |
+                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS |
+                    PlaybackStateCompat.ACTION_SEEK_TO);
+            
+            mediaSession.setPlaybackState(stateBuilder.build());
+            
+            // MySessionCallback has methods that handle callbacks from a media controller
+            mediaSession.setCallback(new MySessionCallback());
+            
+            // Set the session's token so that client activities can communicate with it.
+            setSessionToken(mediaSession.getSessionToken());
+        }
     }
 
     @Override
@@ -79,8 +92,77 @@ public class CarAudioMediaBrowserService extends MediaBrowserServiceCompat {
     public void onLoadChildren(@NonNull String parentId, @NonNull Result<List<MediaBrowserCompat.MediaItem>> result) {
         Log.d(TAG, "onLoadChildren called with parentId: " + parentId);
         
-        // Return an empty list for now
         List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
+        
+        if (MEDIA_ROOT_ID.equals(parentId)) {
+            // Add some sample media items for Android Auto to display
+            // These will show up as browseable content in Android Auto
+            
+            // Create a "Now Playing" item
+            MediaBrowserCompat.MediaItem nowPlayingItem = new MediaBrowserCompat.MediaItem(
+                new android.support.v4.media.MediaDescriptionCompat.Builder()
+                    .setMediaId("now_playing")
+                    .setTitle("Now Playing")
+                    .setSubtitle("Current track")
+                    .build(),
+                MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
+            );
+            mediaItems.add(nowPlayingItem);
+            
+            // Create a "Recent Tracks" browseable folder
+            MediaBrowserCompat.MediaItem recentTracksItem = new MediaBrowserCompat.MediaItem(
+                new android.support.v4.media.MediaDescriptionCompat.Builder()
+                    .setMediaId("recent_tracks")
+                    .setTitle("Recent Tracks")
+                    .setSubtitle("Your recently played music")
+                    .build(),
+                MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
+            );
+            mediaItems.add(recentTracksItem);
+            
+            // Create a "Favorites" browseable folder
+            MediaBrowserCompat.MediaItem favoritesItem = new MediaBrowserCompat.MediaItem(
+                new android.support.v4.media.MediaDescriptionCompat.Builder()
+                    .setMediaId("favorites")
+                    .setTitle("Favorites")
+                    .setSubtitle("Your favorite music")
+                    .build(),
+                MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
+            );
+            mediaItems.add(favoritesItem);
+            
+        } else if ("recent_tracks".equals(parentId)) {
+            // Add some sample recent tracks
+            for (int i = 1; i <= 3; i++) {
+                MediaBrowserCompat.MediaItem trackItem = new MediaBrowserCompat.MediaItem(
+                    new android.support.v4.media.MediaDescriptionCompat.Builder()
+                        .setMediaId("recent_track_" + i)
+                        .setTitle("Sample Track " + i)
+                        .setSubtitle("Sample Artist " + i)
+                        .setDescription("Sample Album " + i)
+                        .build(),
+                    MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
+                );
+                mediaItems.add(trackItem);
+            }
+            
+        } else if ("favorites".equals(parentId)) {
+            // Add some sample favorite tracks
+            for (int i = 1; i <= 2; i++) {
+                MediaBrowserCompat.MediaItem trackItem = new MediaBrowserCompat.MediaItem(
+                    new android.support.v4.media.MediaDescriptionCompat.Builder()
+                        .setMediaId("favorite_track_" + i)
+                        .setTitle("Favorite Song " + i)
+                        .setSubtitle("Favorite Artist " + i)
+                        .setDescription("Favorite Album " + i)
+                        .build(),
+                    MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
+                );
+                mediaItems.add(trackItem);
+            }
+        }
+        
+        Log.d(TAG, "Returning " + mediaItems.size() + " media items for parentId: " + parentId);
         result.sendResult(mediaItems);
     }
 
@@ -88,84 +170,84 @@ public class CarAudioMediaBrowserService extends MediaBrowserServiceCompat {
         staticAndroidAutoController = controller;
         Log.d(TAG, "AndroidAutoController set in MediaBrowserService (static)");
     }
+    
+    public void updateAndroidAutoController(AndroidAutoController controller) {
+        this.androidAutoController = controller;
+        if (controller != null) {
+            MediaSessionCompat.Token token = controller.getSessionToken();
+            if (token != null) {
+                setSessionToken(token);
+                Log.d(TAG, "Updated session token from AndroidAutoController");
+            }
+        }
+    }
 
     private final class MySessionCallback extends MediaSessionCompat.Callback {
+        // Note: Most callbacks are handled by AndroidAutoController's MediaSession
+        // This callback class is only used when AndroidAutoController is not available
+        
         @Override
-        public void onPlay() {
-            Log.d(TAG, "MediaBrowserService: onPlay called");
+        public void onPlayFromMediaId(String mediaId, Bundle extras) {
+            Log.d(TAG, "MediaBrowserService: onPlayFromMediaId called with mediaId: " + mediaId);
+            
+            // Handle different media IDs with valid URLs
+            String audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"; // Default sample
+            String title = "Unknown Track";
+            String artist = "Unknown Artist";
+            String album = "Unknown Album";
+            
+            if (mediaId.equals("now_playing")) {
+                title = "Now Playing";
+                artist = "Current Artist";
+                album = "Current Album";
+                audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+            } else if (mediaId.startsWith("recent_track_")) {
+                int trackNum = Integer.parseInt(mediaId.replace("recent_track_", ""));
+                title = "Sample Track " + trackNum;
+                artist = "Sample Artist " + trackNum;
+                album = "Sample Album " + trackNum;
+                // Use valid SoundHelix URLs (they have songs 1-16 available)
+                int songNum = ((trackNum - 1) % 16) + 1; // Cycle through 1-16
+                audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-" + songNum + ".mp3";
+            } else if (mediaId.startsWith("favorite_track_")) {
+                int trackNum = Integer.parseInt(mediaId.replace("favorite_track_", ""));
+                title = "Favorite Song " + trackNum;
+                artist = "Favorite Artist " + trackNum;
+                album = "Favorite Album " + trackNum;
+                // Use different valid SoundHelix URLs for favorites
+                int songNum = ((trackNum + 7) % 16) + 1; // Offset by 7, cycle through 1-16
+                audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-" + songNum + ".mp3";
+            }
+            
+            Log.d(TAG, "Selected track: " + title + " with URL: " + audioUrl);
+            
+            // Update the AndroidAutoController with the new track info
             if (androidAutoController != null) {
-                // Delegate to AndroidAutoController's handlePlayCommand
+                Log.d(TAG, "Updating AndroidAutoController with: " + title + " (" + audioUrl + ")");
+                Log.d(TAG, "AndroidAutoController isAndroidAutoConnected: " + androidAutoController.isAndroidAutoConnected());
+                
+                // Use the new method that notifies JavaScript about track selection
+                androidAutoController.updateNowPlayingFromAndroidAuto(audioUrl, title, artist, album, null, 180000); // 3 minutes
+                
+                // Directly trigger playback through AndroidAutoController
+                // State management is now handled by CarAudioStateListener
+                Log.d(TAG, "Calling androidAutoController.handlePlayCommand()");
                 androidAutoController.handlePlayCommand();
-            }
-            
-            // Update playback state
-            mediaSession.setPlaybackState(stateBuilder
-                .setState(PlaybackStateCompat.STATE_PLAYING, 0, 1.0f)
-                .build());
-        }
-        
-        @Override
-        public void onPause() {
-            Log.d(TAG, "MediaBrowserService: onPause called");
-            if (androidAutoController != null) {
-                // Delegate to AndroidAutoController's handlePauseCommand
-                androidAutoController.handlePauseCommand();
-            }
-            
-            // Update playback state
-            mediaSession.setPlaybackState(stateBuilder
-                .setState(PlaybackStateCompat.STATE_PAUSED, 0, 0.0f)
-                .build());
-        }
-        
-        @Override
-        public void onStop() {
-            Log.d(TAG, "MediaBrowserService: stop called");
-            if (androidAutoController != null) {
-                // Delegate to AndroidAutoController's handleStopCommand
-                androidAutoController.handleStopCommand();
-            }
-            
-            // Update playback state
-            mediaSession.setPlaybackState(stateBuilder
-                .setState(PlaybackStateCompat.STATE_STOPPED, 0, 0.0f)
-                .build());
-        }
-        
-        @Override
-        public void onSkipToNext() {
-            Log.d(TAG, "MediaBrowserService: onSkipToNext called");
-            if (androidAutoController != null) {
-                // Trigger the listener callback
-                AndroidAutoController.AndroidAutoControllerListener listener = androidAutoController.getListener();
-                if (listener != null) {
-                    listener.onSkipToNext();
+                Log.d(TAG, "androidAutoController.handlePlayCommand() completed");
+            } else {
+                Log.e(TAG, "AndroidAutoController is null, cannot play media");
+                // Set error state only if we have our own mediaSession
+                if (mediaSession != null && stateBuilder != null) {
+                    mediaSession.setPlaybackState(stateBuilder
+                        .setState(PlaybackStateCompat.STATE_ERROR, 0, 0.0f)
+                        .build());
                 }
             }
         }
-        
-        @Override
-        public void onSkipToPrevious() {
-            Log.d(TAG, "MediaBrowserService: onSkipToPrevious called");
-            if (androidAutoController != null) {
-                // Trigger the listener callback
-                AndroidAutoController.AndroidAutoControllerListener listener = androidAutoController.getListener();
-                if (listener != null) {
-                    listener.onSkipToPrevious();
-                }
-            }
-        }
-        
-        @Override
-        public void onSeekTo(long position) {
-            Log.d(TAG, "MediaBrowserService: onSeekTo called with position: " + position);
-            if (androidAutoController != null) {
-                // Trigger the listener callback
-                AndroidAutoController.AndroidAutoControllerListener listener = androidAutoController.getListener();
-                if (listener != null) {
-                    listener.onSeekTo(position);
-                }
-            }
-        }
+    }
+    
+    // Method to get sample URL for testing
+    private String getSampleAudioUrl() {
+        return "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
     }
 }

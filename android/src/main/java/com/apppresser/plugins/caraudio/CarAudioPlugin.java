@@ -42,6 +42,28 @@ public class CarAudioPlugin extends Plugin implements AndroidAutoController.Andr
         call.resolve(result);
     }
     
+    // Method to update Android Auto with current track info (called from JavaScript)
+    @PluginMethod
+    public void updateAndroidAutoNowPlaying(PluginCall call) {
+        if (!androidAutoEnabled) {
+            call.resolve(new JSObject().put("success", false).put("message", "Android Auto not enabled"));
+            return;
+        }
+        
+        String url = call.getString("url");
+        String title = call.getString("title", "");
+        String artist = call.getString("artist", "");
+        String album = call.getString("album", "");
+        String artwork = call.getString("artwork", "");
+        Long duration = call.getLong("duration", 0L);
+        
+        androidAutoController.updateNowPlaying(url, title, artist, album, artwork, duration);
+        
+        JSObject result = new JSObject();
+        result.put("success", true);
+        call.resolve(result);
+    }
+    
     // Modify your existing play method to include Android Auto updates
     @PluginMethod
     public void play(PluginCall call) {
@@ -60,7 +82,7 @@ public class CarAudioPlugin extends Plugin implements AndroidAutoController.Andr
         
         // Add Android Auto integration
         if (androidAutoEnabled) {
-            androidAutoController.updateNowPlaying(title, artist, album, artwork, duration);
+            androidAutoController.updateNowPlaying(url, title, artist, album, artwork, duration);
             androidAutoController.notifyBuffering(0);
             
             // Notify playing after a short delay (when CarAudio is ready)
@@ -161,6 +183,19 @@ public class CarAudioPlugin extends Plugin implements AndroidAutoController.Andr
         JSObject data = new JSObject();
         data.put("action", "seekTo");
         data.put("position", position);
+        notifyListeners("androidAutoCommand", data);
+    }
+    
+    @Override
+    public void onTrackSelected(String url, String title, String artist, String album, String artworkUrl, long duration) {
+        JSObject data = new JSObject();
+        data.put("action", "trackSelected");
+        data.put("url", url);
+        data.put("title", title);
+        data.put("artist", artist);
+        data.put("album", album);
+        data.put("artwork", artworkUrl);
+        data.put("duration", duration);
         notifyListeners("androidAutoCommand", data);
     }
     

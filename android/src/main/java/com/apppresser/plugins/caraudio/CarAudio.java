@@ -22,6 +22,18 @@ public class CarAudio implements MediaPlayer.OnPreparedListener, MediaPlayer.OnE
     private Runnable timeoutRunnable;
     private static final int PREPARE_TIMEOUT = 30000; // 30 seconds timeout
     
+    // Callback interface for state changes
+    public interface CarAudioStateListener {
+        void onPreparing();
+        void onPlaying();
+        void onPaused();
+        void onStopped();
+        void onError(String errorMessage);
+        void onBuffering();
+    }
+    
+    private CarAudioStateListener stateListener;
+    
     // Playback state
     private enum PlaybackState {
         IDLE, PREPARING, PREPARED, PLAYING, PAUSED, STOPPED, ERROR
@@ -38,6 +50,10 @@ public class CarAudio implements MediaPlayer.OnPreparedListener, MediaPlayer.OnE
         this.audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         this.timeoutHandler = new Handler(Looper.getMainLooper());
         initializeMediaPlayer();
+    }
+    
+    public void setStateListener(CarAudioStateListener listener) {
+        this.stateListener = listener;
     }
 
     private void initializeMediaPlayer() {
@@ -101,6 +117,11 @@ public class CarAudio implements MediaPlayer.OnPreparedListener, MediaPlayer.OnE
             mediaPlayer.reset();
             mediaPlayer.setDataSource(url);
             
+            // Notify listener that we're preparing
+            if (stateListener != null) {
+                stateListener.onPreparing();
+            }
+            
             // Set up timeout for preparation
             setupPrepareTimeout();
             
@@ -112,6 +133,9 @@ public class CarAudio implements MediaPlayer.OnPreparedListener, MediaPlayer.OnE
         } catch (IOException e) {
             Log.e(TAG, "Error setting data source: " + e.getMessage());
             currentState = PlaybackState.ERROR;
+            if (stateListener != null) {
+                stateListener.onError("Error setting data source: " + e.getMessage());
+            }
             abandonAudioFocus();
         }
     }
@@ -122,6 +146,9 @@ public class CarAudio implements MediaPlayer.OnPreparedListener, MediaPlayer.OnE
         if (currentState == PlaybackState.PLAYING && mediaPlayer != null) {
             mediaPlayer.pause();
             currentState = PlaybackState.PAUSED;
+            if (stateListener != null) {
+                stateListener.onPaused();
+            }
             Log.d(TAG, "Audio paused");
         } else {
             Log.w(TAG, "Cannot pause - not currently playing");
@@ -135,6 +162,9 @@ public class CarAudio implements MediaPlayer.OnPreparedListener, MediaPlayer.OnE
             if (requestAudioFocus()) {
                 mediaPlayer.start();
                 currentState = PlaybackState.PLAYING;
+                if (stateListener != null) {
+                    stateListener.onPlaying();
+                }
                 Log.d(TAG, "Audio resumed");
             } else {
                 Log.e(TAG, "Failed to gain audio focus for resume");
@@ -152,6 +182,9 @@ public class CarAudio implements MediaPlayer.OnPreparedListener, MediaPlayer.OnE
         if (mediaPlayer != null && (currentState == PlaybackState.PLAYING || currentState == PlaybackState.PAUSED || currentState == PlaybackState.PREPARING)) {
             mediaPlayer.stop();
             currentState = PlaybackState.STOPPED;
+            if (stateListener != null) {
+                stateListener.onStopped();
+            }
             Log.d(TAG, "Audio stopped");
         }
         
@@ -194,6 +227,11 @@ public class CarAudio implements MediaPlayer.OnPreparedListener, MediaPlayer.OnE
         mp.start();
         currentState = PlaybackState.PLAYING;
         
+        // Notify listener that playback started
+        if (stateListener != null) {
+            stateListener.onPlaying();
+        }
+        
         Log.d(TAG, "Audio playback started");
         Log.d(TAG, "MediaPlayer isPlaying after start: " + mp.isPlaying());
         Log.d(TAG, "MediaPlayer current position: " + mp.getCurrentPosition());
@@ -206,6 +244,9 @@ public class CarAudio implements MediaPlayer.OnPreparedListener, MediaPlayer.OnE
         cancelPrepareTimeout();
         
         currentState = PlaybackState.ERROR;
+        if (stateListener != null) {
+            stateListener.onError("MediaPlayer error - what: " + what + ", extra: " + extra);
+        }
         abandonAudioFocus();
         
         // Return true to indicate we handled the error
@@ -217,6 +258,9 @@ public class CarAudio implements MediaPlayer.OnPreparedListener, MediaPlayer.OnE
     public void onCompletion(MediaPlayer mp) {
         Log.d(TAG, "Audio playback completed");
         currentState = PlaybackState.STOPPED;
+        if (stateListener != null) {
+            stateListener.onStopped();
+        }
         abandonAudioFocus();
     }
 
@@ -294,6 +338,9 @@ public class CarAudio implements MediaPlayer.OnPreparedListener, MediaPlayer.OnE
                 Log.e(TAG, "MediaPlayer preparation timed out after " + PREPARE_TIMEOUT + "ms");
                 if (currentState == PlaybackState.PREPARING) {
                     currentState = PlaybackState.ERROR;
+                    if (stateListener != null) {
+                        stateListener.onError("MediaPlayer preparation timed out after " + PREPARE_TIMEOUT + "ms");
+                    }
                     if (mediaPlayer != null) {
                         mediaPlayer.reset();
                     }

@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">CarAudio Test</string>
     <string name="title_activity_main">CarAudio Test</string>
-    <string name="package_name">com.caraudio.plugin</string>
-    <string name="custom_url_scheme">com.caraudio.plugin</string>
+    <string name="package_name">com.apppresser.caraudio</string>
+    <string name="custom_url_scheme">com.apppresser.caraudio</string>
 </resources>

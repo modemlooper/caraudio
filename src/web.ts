@@ -67,4 +67,9 @@ export class CarAudioWeb extends WebPlugin implements CarAudioPlugin {
     console.warn('CarAudio.setMediaItems is not available on web platform.', options);
     return Promise.resolve({ success: false, itemsAdded: 0 });
   }
+
+  async refreshAndroidAutoUI(): Promise<{ success: boolean }> {
+    console.warn('CarAudio.refreshAndroidAutoUI is not available on web platform.');
+    return Promise.resolve({ success: false });
+  }
 }

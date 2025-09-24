@@ -25,6 +25,9 @@ public class CarAudioMediaBrowserService extends MediaBrowserServiceCompat {
     // Static reference to allow setting the controller from the plugin
     private static AndroidAutoController staticAndroidAutoController;
     
+    // Static reference to the service instance for notifying changes
+    private static CarAudioMediaBrowserService serviceInstance;
+    
     // Static data structures for dynamic MediaItems
     private static final Map<String, List<MediaItemData>> mediaItemsMap = new HashMap<>();
     private static final Map<String, String> mediaItemUrls = new HashMap<>();
@@ -54,10 +57,17 @@ public class CarAudioMediaBrowserService extends MediaBrowserServiceCompat {
     public static void clearMediaItems() {
         synchronized (mediaItemsMap) {
             int previousSize = mediaItemsMap.size();
+            
+            // Store the parent IDs that had items before clearing
+            List<String> affectedParents = new ArrayList<>(mediaItemsMap.keySet());
+            
             mediaItemsMap.clear();
             mediaItemUrls.clear();
             Log.d(TAG, "Cleared all media items (was " + previousSize + " parents)");
             Log.d(TAG, "MediaItems map is now empty: " + mediaItemsMap.isEmpty());
+            
+            // Notify Android Auto that the media catalog has changed
+            notifyMediaCatalogChanged(affectedParents);
         }
     }
     
@@ -79,6 +89,9 @@ public class CarAudioMediaBrowserService extends MediaBrowserServiceCompat {
             for (String key : mediaItemsMap.keySet()) {
                 Log.d(TAG, "  - " + key + " (" + mediaItemsMap.get(key).size() + " items)");
             }
+            
+            // Notify Android Auto that this parent's children have changed
+            notifyMediaCatalogChanged(parentId);
         }
     }
     
@@ -107,6 +120,9 @@ public class CarAudioMediaBrowserService extends MediaBrowserServiceCompat {
             for (String key : mediaItemsMap.keySet()) {
                 Log.d(TAG, "  - " + key + " (" + mediaItemsMap.get(key).size() + " items)");
             }
+            
+            // Notify Android Auto that this parent's children have changed
+            notifyMediaCatalogChanged(parentId);
         }
     }
 
@@ -114,6 +130,9 @@ public class CarAudioMediaBrowserService extends MediaBrowserServiceCompat {
     public void onCreate() {
         super.onCreate();
         Log.d(TAG, "MediaBrowserService created");
+        
+        // Store reference to this service instance
+        serviceInstance = this;
         
         // Debug: Log current media items
         synchronized (mediaItemsMap) {
@@ -182,6 +201,8 @@ public class CarAudioMediaBrowserService extends MediaBrowserServiceCompat {
         if (mediaSession != null) {
             mediaSession.release();
         }
+        // Clear the service instance reference
+        serviceInstance = null;
     }
 
     @Nullable
@@ -391,5 +412,45 @@ public class CarAudioMediaBrowserService extends MediaBrowserServiceCompat {
     // Method to get sample URL for testing
     private String getSampleAudioUrl() {
         return "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+    }
+    
+    // Static method to notify Android Auto that media catalog has changed
+    private static void notifyMediaCatalogChanged(String parentId) {
+        if (serviceInstance != null) {
+            Log.d(TAG, "Notifying Android Auto that children changed for parent: " + parentId);
+            serviceInstance.notifyChildrenChanged(parentId);
+        } else {
+            Log.w(TAG, "Cannot notify media catalog change - service instance is null");
+        }
+    }
+    
+    // Static method to notify multiple parent changes
+    private static void notifyMediaCatalogChanged(List<String> parentIds) {
+        if (serviceInstance != null && parentIds != null) {
+            for (String parentId : parentIds) {
+                Log.d(TAG, "Notifying Android Auto that children changed for parent: " + parentId);
+                serviceInstance.notifyChildrenChanged(parentId);
+            }
+            // Also notify the root in case items were added/removed from root level
+            Log.d(TAG, "Notifying Android Auto that root children changed");
+            serviceInstance.notifyChildrenChanged(MEDIA_ROOT_ID);
+        } else {
+            Log.w(TAG, "Cannot notify media catalog changes - service instance is null or parentIds is null");
+        }
+    }
+    
+    // Public method to manually refresh Android Auto UI (callable from plugin)
+    public static void refreshAndroidAutoUI() {
+        Log.d(TAG, "Manual refresh of Android Auto UI requested");
+        if (serviceInstance != null) {
+            // Notify all current parents that their children may have changed
+            synchronized (mediaItemsMap) {
+                List<String> allParents = new ArrayList<>(mediaItemsMap.keySet());
+                allParents.add(MEDIA_ROOT_ID); // Always include root
+                notifyMediaCatalogChanged(allParents);
+            }
+        } else {
+            Log.w(TAG, "Cannot refresh Android Auto UI - service instance is null");
+        }
     }
 }

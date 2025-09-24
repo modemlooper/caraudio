@@ -25,6 +25,7 @@ npx cap sync
 * [`addBrowsableItem(...)`](#addbrowsableitem)
 * [`addPlayableItem(...)`](#addplayableitem)
 * [`setMediaItems(...)`](#setmediaitems)
+* [`refreshAndroidAutoUI()`](#refreshandroidautoui)
 * [`addListener('androidAutoCommand', ...)`](#addlistenerandroidautocommand-)
 * [`removeAllListeners()`](#removealllisteners)
 * [Interfaces](#interfaces)
@@ -186,6 +187,17 @@ setMediaItems(options: SetMediaItemsOptions) => Promise<{ success: boolean; item
 | **`options`** | <code><a href="#setmediaitemsoptions">SetMediaItemsOptions</a></code> |
 
 **Returns:** <code>Promise&lt;{ success: boolean; itemsAdded: number; }&gt;</code>
+
+--------------------
+
+
+### refreshAndroidAutoUI()
+
+```typescript
+refreshAndroidAutoUI() => Promise<{ success: boolean; }>
+```
+
+**Returns:** <code>Promise&lt;{ success: boolean; }&gt;</code>
 
 --------------------
 

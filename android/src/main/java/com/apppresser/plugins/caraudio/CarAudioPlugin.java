@@ -241,6 +241,17 @@ public class CarAudioPlugin extends Plugin implements AndroidAutoController.Andr
         call.resolve(result);
     }
     
+    // Method to manually refresh Android Auto UI
+    @PluginMethod
+    public void refreshAndroidAutoUI(PluginCall call) {
+        Log.d("CarAudioPlugin", "refreshAndroidAutoUI called from JavaScript");
+        CarAudioMediaBrowserService.refreshAndroidAutoUI();
+        
+        JSObject result = new JSObject();
+        result.put("success", true);
+        call.resolve(result);
+    }
+    
     // Method to add browsable folder from JavaScript
     @PluginMethod
     public void addBrowsableItem(PluginCall call) {
@@ -319,6 +330,9 @@ public class CarAudioPlugin extends Plugin implements AndroidAutoController.Andr
                     CarAudioMediaBrowserService.addPlayableItem(parentId, mediaId, title, subtitle, description, url, artwork);
                 }
             }
+            
+            // Refresh Android Auto UI to show the new items immediately
+            CarAudioMediaBrowserService.refreshAndroidAutoUI();
             
             JSObject result = new JSObject();
             result.put("success", true);

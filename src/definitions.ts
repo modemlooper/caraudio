@@ -73,6 +73,7 @@ export interface CarAudioPlugin {
   addBrowsableItem(options: BrowsableItemOptions): Promise<{ success: boolean }>;
   addPlayableItem(options: PlayableItemOptions): Promise<{ success: boolean }>;
   setMediaItems(options: SetMediaItemsOptions): Promise<{ success: boolean; itemsAdded: number }>;
+  refreshAndroidAutoUI(): Promise<{ success: boolean }>;
   
   // Event listeners
   addListener(

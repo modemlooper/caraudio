@@ -1,6 +1,14 @@
 import { WebPlugin } from '@capacitor/core';
 
-import type { CarAudioPlugin, PlayOptions, PlaybackStatus, AndroidAutoStatus } from './definitions';
+import type { 
+  CarAudioPlugin, 
+  PlayOptions, 
+  PlaybackStatus, 
+  AndroidAutoStatus,
+  BrowsableItemOptions,
+  PlayableItemOptions,
+  SetMediaItemsOptions
+} from './definitions';
 
 export class CarAudioWeb extends WebPlugin implements CarAudioPlugin {
   async play(options: PlayOptions): Promise<PlaybackStatus> {
@@ -37,5 +45,26 @@ export class CarAudioWeb extends WebPlugin implements CarAudioPlugin {
   async updateAndroidAutoNowPlaying(options: PlayOptions): Promise<{ success: boolean }> {
     console.warn('CarAudio.updateAndroidAutoNowPlaying is not available on web platform.', options);
     return Promise.resolve({ success: false });
+  }
+
+  // Media item management methods (not available on web)
+  async clearMediaItems(): Promise<{ success: boolean }> {
+    console.warn('CarAudio.clearMediaItems is not available on web platform.');
+    return Promise.resolve({ success: false });
+  }
+
+  async addBrowsableItem(options: BrowsableItemOptions): Promise<{ success: boolean }> {
+    console.warn('CarAudio.addBrowsableItem is not available on web platform.', options);
+    return Promise.resolve({ success: false });
+  }
+
+  async addPlayableItem(options: PlayableItemOptions): Promise<{ success: boolean }> {
+    console.warn('CarAudio.addPlayableItem is not available on web platform.', options);
+    return Promise.resolve({ success: false });
+  }
+
+  async setMediaItems(options: SetMediaItemsOptions): Promise<{ success: boolean; itemsAdded: number }> {
+    console.warn('CarAudio.setMediaItems is not available on web platform.', options);
+    return Promise.resolve({ success: false, itemsAdded: 0 });
   }
 }

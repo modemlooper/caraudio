@@ -21,6 +21,10 @@ npx cap sync
 * [`ensureAudibleVolume()`](#ensureaudiblevolume)
 * [`enableAndroidAuto(...)`](#enableandroidauto)
 * [`updateAndroidAutoNowPlaying(...)`](#updateandroidautonowplaying)
+* [`clearMediaItems()`](#clearmediaitems)
+* [`addBrowsableItem(...)`](#addbrowsableitem)
+* [`addPlayableItem(...)`](#addplayableitem)
+* [`setMediaItems(...)`](#setmediaitems)
 * [`addListener('androidAutoCommand', ...)`](#addlistenerandroidautocommand-)
 * [`removeAllListeners()`](#removealllisteners)
 * [Interfaces](#interfaces)
@@ -130,6 +134,62 @@ updateAndroidAutoNowPlaying(options: PlayOptions) => Promise<{ success: boolean;
 --------------------
 
 
+### clearMediaItems()
+
+```typescript
+clearMediaItems() => Promise<{ success: boolean; }>
+```
+
+**Returns:** <code>Promise&lt;{ success: boolean; }&gt;</code>
+
+--------------------
+
+
+### addBrowsableItem(...)
+
+```typescript
+addBrowsableItem(options: BrowsableItemOptions) => Promise<{ success: boolean; }>
+```
+
+| Param         | Type                                                                  |
+| ------------- | --------------------------------------------------------------------- |
+| **`options`** | <code><a href="#browsableitemoptions">BrowsableItemOptions</a></code> |
+
+**Returns:** <code>Promise&lt;{ success: boolean; }&gt;</code>
+
+--------------------
+
+
+### addPlayableItem(...)
+
+```typescript
+addPlayableItem(options: PlayableItemOptions) => Promise<{ success: boolean; }>
+```
+
+| Param         | Type                                                                |
+| ------------- | ------------------------------------------------------------------- |
+| **`options`** | <code><a href="#playableitemoptions">PlayableItemOptions</a></code> |
+
+**Returns:** <code>Promise&lt;{ success: boolean; }&gt;</code>
+
+--------------------
+
+
+### setMediaItems(...)
+
+```typescript
+setMediaItems(options: SetMediaItemsOptions) => Promise<{ success: boolean; itemsAdded: number; }>
+```
+
+| Param         | Type                                                                  |
+| ------------- | --------------------------------------------------------------------- |
+| **`options`** | <code><a href="#setmediaitemsoptions">SetMediaItemsOptions</a></code> |
+
+**Returns:** <code>Promise&lt;{ success: boolean; itemsAdded: number; }&gt;</code>
+
+--------------------
+
+
 ### addListener('androidAutoCommand', ...)
 
 ```typescript
@@ -186,6 +246,50 @@ removeAllListeners() => Promise<void>
 | --------------- | -------------------- |
 | **`enabled`**   | <code>boolean</code> |
 | **`connected`** | <code>boolean</code> |
+
+
+#### BrowsableItemOptions
+
+| Prop           | Type                |
+| -------------- | ------------------- |
+| **`parentId`** | <code>string</code> |
+| **`mediaId`**  | <code>string</code> |
+| **`title`**    | <code>string</code> |
+| **`subtitle`** | <code>string</code> |
+
+
+#### PlayableItemOptions
+
+| Prop              | Type                |
+| ----------------- | ------------------- |
+| **`parentId`**    | <code>string</code> |
+| **`mediaId`**     | <code>string</code> |
+| **`title`**       | <code>string</code> |
+| **`subtitle`**    | <code>string</code> |
+| **`description`** | <code>string</code> |
+| **`url`**         | <code>string</code> |
+| **`artwork`**     | <code>string</code> |
+
+
+#### SetMediaItemsOptions
+
+| Prop        | Type                         |
+| ----------- | ---------------------------- |
+| **`items`** | <code>MediaItemData[]</code> |
+
+
+#### MediaItemData
+
+| Prop              | Type                                   |
+| ----------------- | -------------------------------------- |
+| **`type`**        | <code>'browsable' \| 'playable'</code> |
+| **`parentId`**    | <code>string</code>                    |
+| **`mediaId`**     | <code>string</code>                    |
+| **`title`**       | <code>string</code>                    |
+| **`subtitle`**    | <code>string</code>                    |
+| **`description`** | <code>string</code>                    |
+| **`url`**         | <code>string</code>                    |
+| **`artwork`**     | <code>string</code>                    |
 
 
 #### AndroidAutoCommandData

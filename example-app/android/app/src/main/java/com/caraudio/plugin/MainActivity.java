@@ -1,4 +1,4 @@
-package com.example.plugin;
+package com.caraudio.plugin;
 
 import com.getcapacitor.BridgeActivity;
 

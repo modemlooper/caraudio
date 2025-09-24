@@ -24,6 +24,38 @@ export interface AndroidAutoStatus {
   connected: boolean;
 }
 
+export interface BrowsableItemOptions {
+  parentId?: string;
+  mediaId: string;
+  title: string;
+  subtitle?: string;
+}
+
+export interface PlayableItemOptions {
+  parentId?: string;
+  mediaId: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  url: string;
+  artwork?: string;
+}
+
+export interface MediaItemData {
+  type: 'browsable' | 'playable';
+  parentId?: string;
+  mediaId: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  url?: string;
+  artwork?: string;
+}
+
+export interface SetMediaItemsOptions {
+  items: MediaItemData[];
+}
+
 export interface CarAudioPlugin {
   play(options: PlayOptions): Promise<PlaybackStatus>;
   pause(): Promise<PlaybackStatus>;
@@ -35,6 +67,12 @@ export interface CarAudioPlugin {
   // Android Auto methods
   enableAndroidAuto(options: { enabled: boolean }): Promise<AndroidAutoStatus>;
   updateAndroidAutoNowPlaying(options: PlayOptions): Promise<{ success: boolean }>;
+  
+  // Media item management methods
+  clearMediaItems(): Promise<{ success: boolean }>;
+  addBrowsableItem(options: BrowsableItemOptions): Promise<{ success: boolean }>;
+  addPlayableItem(options: PlayableItemOptions): Promise<{ success: boolean }>;
+  setMediaItems(options: SetMediaItemsOptions): Promise<{ success: boolean; itemsAdded: number }>;
   
   // Event listeners
   addListener(

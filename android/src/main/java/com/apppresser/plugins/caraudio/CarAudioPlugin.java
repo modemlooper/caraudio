@@ -6,6 +6,11 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import android.util.Log;
+import com.getcapacitor.JSArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import java.util.ArrayList;
+import java.util.List;
 
 @CapacitorPlugin(name = "CarAudio")
 public class CarAudioPlugin extends Plugin implements AndroidAutoController.AndroidAutoControllerListener {
@@ -27,7 +32,33 @@ public class CarAudioPlugin extends Plugin implements AndroidAutoController.Andr
         // Register the AndroidAutoController with the MediaBrowserService
         CarAudioMediaBrowserService.setAndroidAutoController(androidAutoController);
         
+        // Auto-populate media items for Android Auto
+        setupDefaultMediaItems();
+        
         Log.d("CarAudioPlugin", "CarAudio plugin loaded with Android Auto support");
+    }
+    
+    private void setupDefaultMediaItems() {
+        Log.d("CarAudioPlugin", "Setting up default media items for Android Auto");
+        
+        // Clear any existing items first
+        CarAudioMediaBrowserService.clearMediaItems();
+        
+        // Add test browsable folders
+        CarAudioMediaBrowserService.addBrowsableItem("media_root_id", "test_playlists", "Test Playlists", "Debug playlists");
+        CarAudioMediaBrowserService.addBrowsableItem("media_root_id", "test_albums", "Test Albums", "Debug albums");
+        
+        // Add playable items to playlists
+        CarAudioMediaBrowserService.addPlayableItem("test_playlists", "test_track_1", "Debug Song 1", "Debug Artist", "Debug Album", 
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", "");
+        CarAudioMediaBrowserService.addPlayableItem("test_playlists", "test_track_2", "Debug Song 2", "Debug Artist 2", "Debug Album 2", 
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", "");
+        
+        // Add items to albums
+        CarAudioMediaBrowserService.addPlayableItem("test_albums", "album_track_1", "Album Track 1", "Album Artist", "Test Album", 
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", "");
+        
+        Log.d("CarAudioPlugin", "Default media items setup completed");
     }
     
     // Add this new method to enable/disable Android Auto
@@ -197,6 +228,106 @@ public class CarAudioPlugin extends Plugin implements AndroidAutoController.Andr
         data.put("artwork", artworkUrl);
         data.put("duration", duration);
         notifyListeners("androidAutoCommand", data);
+    }
+    
+    // Method to clear/reset MediaItems from JavaScript
+    @PluginMethod
+    public void clearMediaItems(PluginCall call) {
+        Log.d("CarAudioPlugin", "clearMediaItems called from JavaScript");
+        CarAudioMediaBrowserService.clearMediaItems();
+        
+        JSObject result = new JSObject();
+        result.put("success", true);
+        call.resolve(result);
+    }
+    
+    // Method to add browsable folder from JavaScript
+    @PluginMethod
+    public void addBrowsableItem(PluginCall call) {
+        String mediaId = call.getString("mediaId");
+        String title = call.getString("title");
+        String subtitle = call.getString("subtitle", "");
+        String parentId = call.getString("parentId", "media_root_id");
+        
+        Log.d("CarAudioPlugin", "addBrowsableItem called from JavaScript - mediaId: " + mediaId + ", title: " + title + ", parentId: " + parentId);
+        
+        if (mediaId == null || title == null) {
+            call.reject("mediaId and title are required");
+            return;
+        }
+        
+        CarAudioMediaBrowserService.addBrowsableItem(parentId, mediaId, title, subtitle);
+        
+        JSObject result = new JSObject();
+        result.put("success", true);
+        call.resolve(result);
+    }
+    
+    // Method to add playable track from JavaScript
+    @PluginMethod
+    public void addPlayableItem(PluginCall call) {
+        String mediaId = call.getString("mediaId");
+        String title = call.getString("title");
+        String subtitle = call.getString("subtitle", "");
+        String description = call.getString("description", "");
+        String parentId = call.getString("parentId", "media_root_id");
+        String url = call.getString("url", "");
+        String artwork = call.getString("artwork", "");
+        
+        Log.d("CarAudioPlugin", "addPlayableItem called from JavaScript - mediaId: " + mediaId + ", title: " + title + ", parentId: " + parentId + ", url: " + url);
+        
+        if (mediaId == null || title == null) {
+            call.reject("mediaId and title are required");
+            return;
+        }
+        
+        CarAudioMediaBrowserService.addPlayableItem(parentId, mediaId, title, subtitle, description, url, artwork);
+        
+        JSObject result = new JSObject();
+        result.put("success", true);
+        call.resolve(result);
+    }
+    
+    // Method to add multiple items at once from JavaScript
+    @PluginMethod
+    public void setMediaItems(PluginCall call) {
+        try {
+            JSArray items = call.getArray("items");
+            if (items == null) {
+                call.reject("items array is required");
+                return;
+            }
+            
+            // Clear existing items first
+            CarAudioMediaBrowserService.clearMediaItems();
+            
+            // Add each item
+            for (int i = 0; i < items.length(); i++) {
+                JSONObject item = items.getJSONObject(i);
+                String type = item.getString("type"); // "browsable" or "playable"
+                String mediaId = item.getString("mediaId");
+                String title = item.getString("title");
+                String subtitle = item.optString("subtitle", "");
+                String description = item.optString("description", "");
+                String parentId = item.optString("parentId", "media_root_id");
+                
+                if ("browsable".equals(type)) {
+                    CarAudioMediaBrowserService.addBrowsableItem(parentId, mediaId, title, subtitle);
+                } else if ("playable".equals(type)) {
+                    String url = item.optString("url", "");
+                    String artwork = item.optString("artwork", "");
+                    CarAudioMediaBrowserService.addPlayableItem(parentId, mediaId, title, subtitle, description, url, artwork);
+                }
+            }
+            
+            JSObject result = new JSObject();
+            result.put("success", true);
+            result.put("itemsAdded", items.length());
+            call.resolve(result);
+            
+        } catch (JSONException e) {
+            call.reject("Error parsing items array: " + e.getMessage());
+        }
     }
     
     @Override

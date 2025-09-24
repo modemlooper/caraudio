@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
+import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
@@ -107,6 +108,22 @@ public class AndroidAutoController implements CarAudio.CarAudioStateListener {
                 if (listener != null) {
                     listener.onSeekTo(position);
                 }
+            }
+            
+            @Override
+            public void onPlayFromMediaId(String mediaId, Bundle extras) {
+                Log.d(TAG, "AndroidAutoController: onPlayFromMediaId called with mediaId: " + mediaId);
+                
+                // This is the key missing piece! When Android Auto selects a track,
+                // it calls this method, but we need to delegate to the MediaBrowserService
+                // to handle the actual track lookup and playback initiation
+                
+                // We need to get the track info from the MediaBrowserService
+                // and then update our now playing info and start playback
+                Log.d(TAG, "Delegating track selection to MediaBrowserService for lookup");
+                
+                // Delegate to MediaBrowserService to handle track lookup and playback
+                handleTrackSelection(mediaId);
             }
         });
         
@@ -264,13 +281,14 @@ public class AndroidAutoController implements CarAudio.CarAudioStateListener {
             if (currentUrl != null && !currentUrl.isEmpty()) {
                 // We have a URL (from Android Auto or JavaScript), use it - state will be updated via CarAudioStateListener
                 Log.d(TAG, "Starting playback with URL: " + currentUrl);
+                Log.d(TAG, "Track info - Title: " + currentTitle + ", Artist: " + currentArtist);
+                
+                // Start playback - CarAudioStateListener will handle state updates
                 carAudio.play(currentUrl, currentTitle, currentArtist, currentArtworkUrl);
                 
-                // Always notify JavaScript when starting playback, so it can update its UI
-                if (listener != null) {
-                    Log.d(TAG, "Notifying JavaScript listener about play action");
-                    listener.onPlay();
-                }
+                // Only notify JavaScript for non-Android Auto initiated playback
+                // Android Auto track selections are already notified via onTrackSelected
+                Log.d(TAG, "Playback started via CarAudio, state updates will come via CarAudioStateListener");
             } else {
                 // No URL available, notify listener to request one from JavaScript
                 Log.d(TAG, "No URL available, requesting from JavaScript");
@@ -310,6 +328,19 @@ public class AndroidAutoController implements CarAudio.CarAudioStateListener {
         
         if (listener != null) {
             listener.onStop();
+        }
+    }
+    
+    private void handleTrackSelection(String mediaId) {
+        Log.d(TAG, "handleTrackSelection called with mediaId: " + mediaId);
+        
+        // Import the MediaBrowserService class to call its static method
+        try {
+            // Delegate to MediaBrowserService to handle track lookup and playback
+            com.apppresser.plugins.caraudio.CarAudioMediaBrowserService.handleTrackSelectionFromController(mediaId);
+        } catch (Exception e) {
+            Log.e(TAG, "Error handling track selection: " + e.getMessage());
+            // Don't play anything if we can't find the proper track data
         }
     }
     
@@ -405,12 +436,14 @@ public class AndroidAutoController implements CarAudio.CarAudioStateListener {
     @Override
     public void onPreparing() {
         Log.d(TAG, "CarAudio is preparing - setting buffering state");
+        Log.d(TAG, "Current track: " + currentTitle + " by " + currentArtist + " (" + currentUrl + ")");
         updatePlaybackState(PlaybackStateCompat.STATE_BUFFERING, 0);
     }
     
     @Override
     public void onPlaying() {
         Log.d(TAG, "CarAudio started playing - setting playing state");
+        Log.d(TAG, "Now playing: " + currentTitle + " by " + currentArtist);
         updatePlaybackState(PlaybackStateCompat.STATE_PLAYING, 0);
     }
     
@@ -429,6 +462,7 @@ public class AndroidAutoController implements CarAudio.CarAudioStateListener {
     @Override
     public void onError(String errorMessage) {
         Log.e(TAG, "CarAudio error - setting error state: " + errorMessage);
+        Log.e(TAG, "Error occurred for track: " + currentTitle + " (" + currentUrl + ")");
         notifyError(errorMessage);
     }
     

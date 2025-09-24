@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.apppresser.caraudio"
+    namespace "com.caraudio.plugin"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.apppresser.caraudio"
+        applicationId "com.caraudio.plugin"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

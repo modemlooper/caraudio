@@ -117,9 +117,15 @@ public class CarAudio implements MediaPlayer.OnPreparedListener, MediaPlayer.OnE
             mediaPlayer.reset();
             mediaPlayer.setDataSource(url);
             
+            Log.d(TAG, "MediaPlayer reset and data source set for: " + url);
+            Log.d(TAG, "Track info - Title: " + title + ", Artist: " + artist);
+            
             // Notify listener that we're preparing
             if (stateListener != null) {
+                Log.d(TAG, "Notifying state listener: onPreparing()");
                 stateListener.onPreparing();
+            } else {
+                Log.w(TAG, "No state listener set - AndroidAutoController won't be notified of state changes");
             }
             
             // Set up timeout for preparation
@@ -229,7 +235,10 @@ public class CarAudio implements MediaPlayer.OnPreparedListener, MediaPlayer.OnE
         
         // Notify listener that playback started
         if (stateListener != null) {
+            Log.d(TAG, "Notifying state listener: onPlaying()");
             stateListener.onPlaying();
+        } else {
+            Log.w(TAG, "No state listener set - AndroidAutoController won't be notified that playback started");
         }
         
         Log.d(TAG, "Audio playback started");

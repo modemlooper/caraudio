@@ -112,7 +112,7 @@
   </head>
   <body>
     <main>
-      <h1>🚗 CarAudio Plugin Example</h1>
+      <h1>🚗 CarAudio</h1>
       
       <div class="input-group">
         <label for="playInput">Audio URL:</label>
@@ -124,6 +124,19 @@
         <button class="pause-btn" onclick="testPause()">⏸️ Pause</button>
         <button class="resume-btn" onclick="testResume()">▶️ Resume</button>
         <button class="stop-btn" onclick="testStop()">⏹️ Stop</button>
+      </div>
+
+      <!-- Android Auto Debug Section -->
+      <div class="sample-urls">
+        <h3>🚗 Android Auto Debug</h3>
+        <p style="font-size: 14px; color: #666; margin: 10px 0;">Media items are auto-loaded on app start. Use buttons below to manage them:</p>
+        <button class="status-btn" onclick="testAndroidAutoSetup()" style="width: 100%; margin: 5px 0;">🔧 Test Android Auto Setup</button>
+        <button class="play-btn" onclick="addTestMediaItems()" style="width: 100%; margin: 5px 0;">🔄 Refresh Media Items</button>
+        <button class="pause-btn" onclick="clearAllMediaItems()" style="width: 100%; margin: 5px 0;">🗑️ Clear All Media Items</button>
+      </div>
+
+      <div class="status-display" id="status">
+        Status: Ready
       </div>
 
       <div class="error-display" id="error">

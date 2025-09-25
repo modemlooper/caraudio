@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "Caraudio",
-    platforms: [.iOS(.v14)],
+    platforms: [.iOS(.v17)],
     products: [
         .library(
             name: "Caraudio",
